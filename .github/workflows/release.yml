@@ -1,0 +1,237 @@
+name: 🚀 Release & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ===== VALIDATE RELEASE =====
+  validate:
+    name: ✅ Validate Release
+    runs-on: ubuntu-latest
+    
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🏷️ Extract version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+          
+      - name: ✅ Validate version format
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Expected format: v1.0.0"
+            exit 1
+          fi
+
+  # ===== BUILD & PUSH IMAGES =====
+  build-images:
+    name: 🐳 Build & Push Images
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    permissions:
+      contents: read
+      packages: write
+      
+    strategy:
+      matrix:
+        component: [backend, frontend]
+        
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 📝 Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.component }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest
+            type=raw,value=${{ needs.validate.outputs.version }}
+
+      - name: 🏗️ Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./smart-watering-${{ matrix.component }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # ===== CREATE RELEASE =====
+  create-release:
+    name: 📋 Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate, build-images]
+    
+    permissions:
+      contents: write
+      
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📋 Generate changelog
+        id: changelog
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          PREV_VERSION=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          
+          echo "## 🌱 Smart Watering $VERSION" > changelog.md
+          echo "" >> changelog.md
+          
+          if [[ -n "$PREV_VERSION" ]]; then
+            echo "### 📝 Changes since $PREV_VERSION" >> changelog.md
+            echo "" >> changelog.md
+            git log --pretty=format:"- %s" $PREV_VERSION..HEAD >> changelog.md
+          else
+            echo "### 🎉 Initial Release" >> changelog.md
+            echo "" >> changelog.md
+            echo "- Complete smart watering system with AI weather integration" >> changelog.md
+            echo "- React + TypeScript frontend" >> changelog.md
+            echo "- Node.js + Express backend" >> changelog.md
+            echo "- PostgreSQL database" >> changelog.md
+            echo "- Docker containerization" >> changelog.md
+          fi
+          
+          echo "" >> changelog.md
+          echo "### 🐳 Docker Images" >> changelog.md
+          echo "" >> changelog.md
+          echo "- \`ghcr.io/${{ env.IMAGE_NAME }}-backend:$VERSION\`" >> changelog.md
+          echo "- \`ghcr.io/${{ env.IMAGE_NAME }}-frontend:$VERSION\`" >> changelog.md
+          echo "" >> changelog.md
+          echo "### 🚀 Deployment" >> changelog.md
+          echo "" >> changelog.md
+          echo "\`\`\`bash" >> changelog.md
+          echo "# Download and deploy" >> changelog.md
+          echo "curl -L https://github.com/${{ github.repository }}/archive/$VERSION.tar.gz | tar xz" >> changelog.md
+          echo "cd smart-watering-*/" >> changelog.md
+          echo "cp .env.example .env" >> changelog.md
+          echo "# Configure your .env file" >> changelog.md
+          echo "make deploy" >> changelog.md
+          echo "\`\`\`" >> changelog.md
+
+      - name: 🎯 Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.validate.outputs.version }}
+          name: Smart Watering ${{ needs.validate.outputs.version }}
+          body_path: changelog.md
+          draft: false
+          prerelease: false
+          files: |
+            docker-compose.yml
+            .env.example
+            Makefile
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  # ===== UPDATE DOCKER COMPOSE =====
+  update-compose:
+    name: 📝 Update Docker Compose
+    runs-on: ubuntu-latest
+    needs: [validate, build-images]
+    
+    permissions:
+      contents: write
+      
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔄 Update image versions
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          
+          # Update docker-compose.yml with new image versions
+          sed -i "s|image: projects-backend|image: ghcr.io/${{ env.IMAGE_NAME }}-backend:$VERSION|g" docker-compose.yml
+          sed -i "s|image: projects-frontend|image: ghcr.io/${{ env.IMAGE_NAME }}-frontend:$VERSION|g" docker-compose.yml
+          
+          # Create production compose file
+          cp docker-compose.yml docker-compose.prod.yml
+          
+      - name: 💾 Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docker-compose.yml docker-compose.prod.yml
+          git commit -m "🐳 Update Docker images to ${{ needs.validate.outputs.version }}" || exit 0
+          git push
+
+  # ===== DEPLOYMENT NOTIFICATION =====
+  notify-deployment:
+    name: 📢 Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [validate, create-release, update-compose]
+    
+    steps:
+      - name: 🎉 Success notification
+        run: |
+          echo "🚀 Smart Watering ${{ needs.validate.outputs.version }} released successfully!"
+          echo "📦 Images: ghcr.io/${{ env.IMAGE_NAME }}-{backend,frontend}:${{ needs.validate.outputs.version }}"
+          echo "🔗 Release: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.version }}"
+
+  # ===== SECURITY SCAN =====
+  security-scan:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    needs: build-images
+    
+    strategy:
+      matrix:
+        component: [backend, frontend]
+        
+    steps:
+      - name: 🔍 Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ env.IMAGE_NAME }}-${{ matrix.component }}:${{ needs.validate.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.component }}.sarif'
+
+      - name: 📊 Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results-${{ matrix.component }}.sarif'

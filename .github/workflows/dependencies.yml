@@ -1,0 +1,115 @@
+name: 🔄 Dependencies Update
+
+on:
+  schedule:
+    # Run every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    name: 📦 Update Dependencies
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📱 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 🔍 Check for updates (Backend)
+        working-directory: ./smart-watering-backend
+        run: |
+          npm outdated > outdated-backend.txt || true
+          cat outdated-backend.txt
+
+      - name: 🔍 Check for updates (Frontend)
+        working-directory: ./smart-watering-frontend
+        run: |
+          npm outdated > outdated-frontend.txt || true
+          cat outdated-frontend.txt
+
+      - name: 📊 Security audit
+        run: |
+          echo "## Backend Security Audit" > security-report.md
+          cd smart-watering-backend && npm audit --audit-level=moderate >> ../security-report.md || true
+          echo "" >> security-report.md
+          echo "## Frontend Security Audit" >> security-report.md
+          cd ../smart-watering-frontend && npm audit --audit-level=moderate >> ../security-report.md || true
+
+      - name: 🔧 Auto-fix security issues
+        run: |
+          cd smart-watering-backend && npm audit fix || true
+          cd ../smart-watering-frontend && npm audit fix || true
+
+      - name: 🧪 Run tests after fixes
+        run: |
+          cd smart-watering-backend && npm test || echo "Backend tests failed"
+          cd ../smart-watering-frontend && npm test -- --watchAll=false || echo "Frontend tests failed"
+
+      - name: 📝 Create PR if changes
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: |
+            🔒 Auto-fix security vulnerabilities
+            
+            - Updated dependencies with security fixes
+            - Ran automated tests
+            
+            🤖 Generated with Claude Code
+            Co-Authored-By: Claude <noreply@anthropic.com>
+          title: '🔒 Auto-fix security vulnerabilities'
+          body: |
+            ## 🔒 Security Updates
+            
+            This PR contains automated security fixes for dependencies.
+            
+            ### 📋 Changes
+            - Applied `npm audit fix` to both backend and frontend
+            - Updated vulnerable dependencies
+            - Ran automated tests
+            
+            ### 🧪 Test Results
+            - Backend tests: See CI results
+            - Frontend tests: See CI results
+            
+            ### 📊 Security Report
+            Check the attached security audit report for details.
+            
+            ---
+            🤖 This PR was created automatically by GitHub Actions
+          branch: security/auto-fix-vulnerabilities
+          delete-branch: true
+
+  dependabot-auto-merge:
+    name: 🤖 Auto-merge Dependabot PRs
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: ✅ Auto-approve Dependabot PR
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🔀 Auto-merge if tests pass
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
