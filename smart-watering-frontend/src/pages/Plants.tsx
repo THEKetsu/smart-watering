@@ -138,37 +138,17 @@ const plantTranslationDict: Record<string, string> = {
 };
 
 const plantSchema = yup.object({
-  nickname: yup.string().optional(),
-  quantity: yup.number().positive().integer().required('La quantité est requise'),
-  // Champs pour création manuelle
-  name: yup.string().when('isManualCreation', {
-    is: true,
-    then: yup.string().required('Le nom de la plante est requis'),
-    otherwise: yup.string().optional()
-  }),
-  type: yup.string().when('isManualCreation', {
-    is: true,
-    then: yup.string().required('Le type de plante est requis'),
-    otherwise: yup.string().optional()
-  }),
+  name: yup.string().required('Le nom de la plante est requis'),
+  type: yup.string().required('Le type de plante est requis'),
   description: yup.string().optional(),
-  baseWateringFrequencyDays: yup.number().positive().optional(),
-  baseWaterAmountMl: yup.number().positive().optional(),
+  baseWateringFrequencyDays: yup.number().positive().integer().min(1).max(365).optional(),
+  baseWaterAmountMl: yup.number().positive().integer().min(10).max(5000).optional(),
 });
 
 const Plants: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingPlant, setEditingPlant] = useState<Plant | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Plant | null>(null);
-  const [plantSearchQuery, setPlantSearchQuery] = useState('');
-  const [plantSearchResults, setPlantSearchResults] = useState<PlantSearchResult[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedApiPlant, setSelectedApiPlant] = useState<PlantSearchResult | null>(null);
-  const [searchMethod, setSearchMethod] = useState<'name' | 'photo'>('name');
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [photoAnalyzing, setPhotoAnalyzing] = useState(false);
-  const [isManualCreation, setIsManualCreation] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -185,14 +165,11 @@ const Plants: React.FC = () => {
   } = useForm({
     resolver: yupResolver(plantSchema),
     defaultValues: {
-      nickname: '',
-      quantity: 1,
       name: '',
       type: '',
       description: '',
       baseWateringFrequencyDays: 7,
       baseWaterAmountMl: 250,
-      isManualCreation: false,
     },
   });
 
@@ -277,8 +254,11 @@ const Plants: React.FC = () => {
     if (plant) {
       setEditingPlant(plant);
       reset({
-        nickname: (plant as any).nickname || '',
-        quantity: (plant as any).quantity || 1,
+        name: plant.name,
+        type: plant.type,
+        description: plant.description || '',
+        baseWateringFrequencyDays: plant.baseWateringFrequencyDays,
+        baseWaterAmountMl: plant.baseWaterAmountMl,
       });
     } else {
       setEditingPlant(null);
@@ -290,14 +270,6 @@ const Plants: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setEditingPlant(null);
-    setPlantSearchQuery('');
-    setPlantSearchResults([]);
-    setSelectedApiPlant(null);
-    setSearchMethod('name');
-    setUploadedImage(null);
-    setImagePreview(null);
-    setPhotoAnalyzing(false);
-    setIsManualCreation(false);
     reset();
   };
 
@@ -498,63 +470,25 @@ const Plants: React.FC = () => {
 
   const onSubmit = (data: any) => {
     console.log('📝 Données soumises:', data);
-    console.log('🔧 Mode manuel:', isManualCreation);
     
     if (editingPlant) {
+      // Mode édition - garder seulement les champs modifiables
       const updateData = {
-        nickname: data.nickname,
-        quantity: data.quantity,
+        name: data.name,
+        description: data.description,
       };
       updateMutation.mutate({ id: editingPlant.id, data: updateData as any });
     } else {
-      let plantData: any;
-
-      if (isManualCreation) {
-        // Création manuelle simple
-        plantData = {
-          name: data.name,
-          type: data.type,
-          description: data.description || '',
-          baseWateringFrequencyDays: data.baseWateringFrequencyDays || 7,
-          baseWaterAmountMl: data.baseWaterAmountMl || 250,
-          springMultiplier: 1.0,
-          summerMultiplier: 1.2,
-          autumnMultiplier: 0.8,
-          winterMultiplier: 0.5,
-          minTemperature: 15,
-          maxTemperature: 30,
-          idealHumidity: 50,
-          rainThresholdMm: 5,
-        };
-        console.log('🌱 Données à envoyer (manuel):', plantData);
-      } else {
-        // Création depuis API externe
-        if (!selectedApiPlant) {
-          toast.error('Veuillez sélectionner une plante depuis la base de données ou activer la création manuelle');
-          return;
-        }
-
-        plantData = {
-          ...selectedApiPlant,
-          nickname: data.nickname,
-          quantity: data.quantity,
-          // Les données techniques viennent de l'API
-          name: selectedApiPlant.common_name,
-          type: PlantType.TROPICAL, // À déterminer depuis l'API
-          description: selectedApiPlant.scientific_name,
-          baseWateringFrequencyDays: 7,
-          baseWaterAmountMl: 250,
-          springMultiplier: 1.0,
-          summerMultiplier: 1.2,
-          autumnMultiplier: 0.8,
-          winterMultiplier: 0.5,
-          minTemperature: 15,
-          maxTemperature: 30,
-          idealHumidity: 50,
-          rainThresholdMm: 5,
-        };
-      }
-
+      // Mode création - données complètes
+      const plantData = {
+        name: data.name,
+        type: data.type,
+        description: data.description || '',
+        baseWateringFrequencyDays: data.baseWateringFrequencyDays || 7,
+        baseWaterAmountMl: data.baseWaterAmountMl || 250,
+      };
+      
+      console.log('🌱 Données à envoyer:', plantData);
       createMutation.mutate(plantData);
     }
   };

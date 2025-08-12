@@ -4,7 +4,7 @@ import { Box } from '@mui/material';
 
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
-import Plants from './pages/Plants';
+import Plants from './pages/PlantsSimple';
 import PlantDetail from './pages/PlantDetail';
 import Schedule from './pages/Schedule';
 import Weather from './pages/Weather';

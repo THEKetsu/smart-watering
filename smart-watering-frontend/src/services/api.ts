@@ -16,9 +16,8 @@ import { mockPlantsAPI, mockSchedulesAPI, mockWeatherAPI } from './mockApi';
 
 const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
-// Mode développement : utiliser les mocks si pas d'API ou si MOCK_MODE activé
-const USE_MOCKS = process.env.NODE_ENV === 'development' && 
-  (process.env.REACT_APP_MOCK_MODE === 'true' || !process.env.REACT_APP_API_URL);
+// Mode développement : utiliser les mocks SEULEMENT si explicitement demandé
+const USE_MOCKS = process.env.REACT_APP_MOCK_MODE === 'true';
 
 // Log du mode utilisé
 console.log(`🔧 Mode API: ${USE_MOCKS ? 'MOCK' : 'REAL'} - URL: ${BASE_URL}`);
@@ -46,12 +45,8 @@ const withFallback = async <T>(apiCall: () => Promise<T>, mockCall: () => Promis
     return await mockCall();
   }
   
-  try {
-    return await apiCall();
-  } catch (error) {
-    console.warn('⚠️ API indisponible, fallback vers les mocks');
-    return await mockCall();
-  }
+  // Mode API réel - pas de fallback automatique vers les mocks
+  return await apiCall();
 };
 
 export const plantsAPI = {
