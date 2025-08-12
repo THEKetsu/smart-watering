@@ -497,6 +497,9 @@ const Plants: React.FC = () => {
   };
 
   const onSubmit = (data: any) => {
+    console.log('📝 Données soumises:', data);
+    console.log('🔧 Mode manuel:', isManualCreation);
+    
     if (editingPlant) {
       const updateData = {
         nickname: data.nickname,
@@ -523,6 +526,7 @@ const Plants: React.FC = () => {
           idealHumidity: 50,
           rainThresholdMm: 5,
         };
+        console.log('🌱 Données à envoyer (manuel):', plantData);
       } else {
         // Création depuis API externe
         if (!selectedApiPlant) {
@@ -567,6 +571,27 @@ const Plants: React.FC = () => {
 
   const handleToggleActive = (plant: Plant) => {
     toggleActiveMutation.mutate(plant.id);
+  };
+
+  // Test temporaire pour debug
+  const testCreatePlant = () => {
+    const testData = {
+      name: "Test Debug Frontend",
+      type: PlantType.TROPICAL,
+      description: "Test depuis bouton debug",
+      baseWateringFrequencyDays: 7,
+      baseWaterAmountMl: 250,
+      springMultiplier: 1.0,
+      summerMultiplier: 1.2,
+      autumnMultiplier: 0.8,
+      winterMultiplier: 0.5,
+      minTemperature: 15,
+      maxTemperature: 30,
+      idealHumidity: 50,
+      rainThresholdMm: 5,
+    };
+    console.log('🧪 Test données:', testData);
+    createMutation.mutate(testData);
   };
 
   const handleViewDetails = (plantId: string) => {
@@ -624,6 +649,15 @@ const Plants: React.FC = () => {
             onClick={() => handleOpenDialog()}
           >
             Ajouter une plante
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={testCreatePlant}
+            disabled={createMutation.isLoading}
+            sx={{ ml: 2 }}
+          >
+            🧪 Test Debug
           </Button>
         </Box>
       </Box>
@@ -779,6 +813,15 @@ const Plants: React.FC = () => {
           >
             Ajouter une plante
           </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={testCreatePlant}
+            disabled={createMutation.isLoading}
+            sx={{ ml: 2 }}
+          >
+            🧪 Test Debug
+          </Button>
         </Box>
       )}
 
@@ -879,7 +922,6 @@ const Plants: React.FC = () => {
                           control={control}
                           render={({ field }) => (
                             <Autocomplete
-                              {...field}
                               options={Object.values(PlantType)}
                               getOptionLabel={(option) => PlantTypeLabels[option]}
                               renderInput={(params) => (
