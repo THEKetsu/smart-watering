@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chmod:*)",
+      "Bash(npm install)",
+      "Bash(docker-compose up:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "Bash(npx ts-node:*)",
+      "WebFetch(domain:perenual.com)",
+      "Bash(npm start)",
+      "Bash(npm test:*)",
+      "Bash(cp:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(docker:*)",
+      "Bash(npm run build:*)",
+      "Bash(REACT_APP_MOCK_MODE=true npm start)",
+      "Bash(curl:*)",
+      "Bash(./test-app.sh:*)",
+      "Bash(claude --version)",
+      "Bash(timeout 30s docker-compose logs --follow backend)",
+      "Bash(true)",
+      "Bash(git init:*)"
+    ],
+    "deny": []
+  }
+}

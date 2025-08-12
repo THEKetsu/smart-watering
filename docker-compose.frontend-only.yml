@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # Frontend en mode développement avec mocks
+  frontend-demo:
+    build:
+      context: ./smart-watering-frontend
+      dockerfile: Dockerfile.dev
+    container_name: smart-watering-frontend-demo
+    restart: unless-stopped
+    environment:
+      - REACT_APP_MOCK_MODE=true
+      - NODE_ENV=development
+      - REACT_APP_API_URL=
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./smart-watering-frontend/src:/app/src:ro
+      - ./smart-watering-frontend/public:/app/public:ro
+    networks:
+      - frontend-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  frontend-network:
+    driver: bridge

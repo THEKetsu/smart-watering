@@ -1,0 +1,94 @@
+services:
+  # Base de données PostgreSQL
+  database:
+    image: postgres:15-alpine
+    container_name: smart-watering-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: smart_watering_2024
+      POSTGRES_DB: smart_watering
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - smart-watering-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d smart_watering"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Backend API Node.js
+  backend:
+    build:
+      context: ./smart-watering-backend
+      dockerfile: Dockerfile
+    container_name: smart-watering-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      
+      # Base de données
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: smart_watering
+      DB_USER: postgres
+      DB_PASSWORD: smart_watering_2024
+      
+      # API Météo
+      OPENWEATHER_API_KEY: test-key
+      
+      # Sécurité
+      JWT_SECRET: smart_watering_jwt_secret_key_2024
+      JWT_EXPIRES_IN: 24h
+      
+      # CORS
+      CORS_ORIGIN: http://localhost:3000
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "3001:3001"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - smart-watering-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./smart-watering-frontend
+      dockerfile: Dockerfile.simple
+    container_name: smart-watering-frontend
+    restart: unless-stopped
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001/api
+      - REACT_APP_MOCK_MODE=false
+      - NODE_ENV=development
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - smart-watering-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  smart-watering-network:
+    driver: bridge
