@@ -20,7 +20,9 @@
       "Bash(claude --version)",
       "Bash(timeout 30s docker-compose logs --follow backend)",
       "Bash(true)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(make:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

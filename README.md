@@ -8,6 +8,28 @@
 
 > Système complet d'arrosage automatique intelligent basé sur l'IA météorologique et les besoins spécifiques des plantes.
 
+## 📸 Aperçu de l'Application
+
+<div align="center">
+
+### 🏠 Dashboard Principal
+![Dashboard](screenshots/dashboard.png)
+*Vue d'ensemble avec graphiques météo, alertes et planning d'arrosage*
+
+### 🌱 Gestion des Plantes  
+![Plantes](screenshots/plants.png)
+*Interface intuitive pour ajouter, modifier et suivre vos plantes*
+
+### 📊 Planning Intelligent
+![Planning](screenshots/schedule.png)
+*Recommandations d'arrosage basées sur l'IA météorologique*
+
+### ☀️ Données Météorologiques
+![Météo](screenshots/weather.png)
+*Intégration temps réel avec prévisions 7 jours*
+
+</div>
+
 ## 🚀 Fonctionnalités
 
 ### 🧠 Intelligence Artificielle
