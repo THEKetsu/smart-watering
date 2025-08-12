@@ -140,6 +140,20 @@ const plantTranslationDict: Record<string, string> = {
 const plantSchema = yup.object({
   nickname: yup.string().optional(),
   quantity: yup.number().positive().integer().required('La quantité est requise'),
+  // Champs pour création manuelle
+  name: yup.string().when('isManualCreation', {
+    is: true,
+    then: yup.string().required('Le nom de la plante est requis'),
+    otherwise: yup.string().optional()
+  }),
+  type: yup.string().when('isManualCreation', {
+    is: true,
+    then: yup.string().required('Le type de plante est requis'),
+    otherwise: yup.string().optional()
+  }),
+  description: yup.string().optional(),
+  baseWateringFrequencyDays: yup.number().positive().optional(),
+  baseWaterAmountMl: yup.number().positive().optional(),
 });
 
 const Plants: React.FC = () => {
@@ -154,6 +168,7 @@ const Plants: React.FC = () => {
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [photoAnalyzing, setPhotoAnalyzing] = useState(false);
+  const [isManualCreation, setIsManualCreation] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -172,6 +187,12 @@ const Plants: React.FC = () => {
     defaultValues: {
       nickname: '',
       quantity: 1,
+      name: '',
+      type: '',
+      description: '',
+      baseWateringFrequencyDays: 7,
+      baseWaterAmountMl: 250,
+      isManualCreation: false,
     },
   });
 
@@ -276,6 +297,7 @@ const Plants: React.FC = () => {
     setUploadedImage(null);
     setImagePreview(null);
     setPhotoAnalyzing(false);
+    setIsManualCreation(false);
     reset();
   };
 
@@ -475,11 +497,6 @@ const Plants: React.FC = () => {
   };
 
   const onSubmit = (data: any) => {
-    if (!selectedApiPlant) {
-      toast.error('Veuillez sélectionner une plante depuis la base de données');
-      return;
-    }
-
     if (editingPlant) {
       const updateData = {
         nickname: data.nickname,
@@ -487,26 +504,53 @@ const Plants: React.FC = () => {
       };
       updateMutation.mutate({ id: editingPlant.id, data: updateData as any });
     } else {
-      // Combiner les données API avec les données utilisateur
-      const plantData = {
-        ...selectedApiPlant,
-        nickname: data.nickname,
-        quantity: data.quantity,
-        // Les données techniques viennent de l'API
-        name: selectedApiPlant.common_name,
-        type: PlantType.TROPICAL, // À déterminer depuis l'API
-        description: selectedApiPlant.scientific_name,
-        baseWateringFrequencyDays: 7, // À récupérer depuis l'API
-        baseWaterAmountMl: 250,
-        springMultiplier: 1.0,
-        summerMultiplier: 1.2,
-        autumnMultiplier: 0.8,
-        winterMultiplier: 0.5,
-        minTemperature: 15,
-        maxTemperature: 30,
-        idealHumidity: 50,
-        rainThresholdMm: 5,
-      };
+      let plantData: any;
+
+      if (isManualCreation) {
+        // Création manuelle simple
+        plantData = {
+          name: data.name,
+          type: data.type,
+          description: data.description || '',
+          baseWateringFrequencyDays: data.baseWateringFrequencyDays || 7,
+          baseWaterAmountMl: data.baseWaterAmountMl || 250,
+          springMultiplier: 1.0,
+          summerMultiplier: 1.2,
+          autumnMultiplier: 0.8,
+          winterMultiplier: 0.5,
+          minTemperature: 15,
+          maxTemperature: 30,
+          idealHumidity: 50,
+          rainThresholdMm: 5,
+        };
+      } else {
+        // Création depuis API externe
+        if (!selectedApiPlant) {
+          toast.error('Veuillez sélectionner une plante depuis la base de données ou activer la création manuelle');
+          return;
+        }
+
+        plantData = {
+          ...selectedApiPlant,
+          nickname: data.nickname,
+          quantity: data.quantity,
+          // Les données techniques viennent de l'API
+          name: selectedApiPlant.common_name,
+          type: PlantType.TROPICAL, // À déterminer depuis l'API
+          description: selectedApiPlant.scientific_name,
+          baseWateringFrequencyDays: 7,
+          baseWaterAmountMl: 250,
+          springMultiplier: 1.0,
+          summerMultiplier: 1.2,
+          autumnMultiplier: 0.8,
+          winterMultiplier: 0.5,
+          minTemperature: 15,
+          maxTemperature: 30,
+          idealHumidity: 50,
+          rainThresholdMm: 5,
+        };
+      }
+
       createMutation.mutate(plantData);
     }
   };
@@ -767,9 +811,15 @@ const Plants: React.FC = () => {
                 {/* Onglets de sélection de méthode */}
                 <Paper sx={{ mb: 3 }}>
                   <Tabs 
-                    value={searchMethod} 
+                    value={isManualCreation ? 'manual' : searchMethod} 
                     onChange={(_, newValue) => {
-                      setSearchMethod(newValue);
+                      if (newValue === 'manual') {
+                        setIsManualCreation(true);
+                        setSelectedApiPlant(null);
+                      } else {
+                        setIsManualCreation(false);
+                        setSearchMethod(newValue);
+                      }
                       setPlantSearchResults([]);
                       setPlantSearchQuery('');
                       setUploadedImage(null);
@@ -781,15 +831,130 @@ const Plants: React.FC = () => {
                     <Tab 
                       value="name" 
                       label="Recherche par nom" 
-                      icon={<Search />} 
-                      iconPosition="start"
+                      icon={<Search />}
                     />
                     <Tab 
                       value="photo" 
-                      label="Identification par photo" 
-                      icon={<PhotoCamera />} 
+                      label="Analyse photo" 
+                      icon={<PhotoCamera />}
+                    />
+                    <Tab 
+                      value="manual" 
+                      label="Création manuelle" 
+                      icon={<EditIcon />} 
                       iconPosition="start"
                     />
+                  </Tabs>
+                </Paper>
+
+                {/* Formulaire de création manuelle */}
+                {isManualCreation && (
+                  <Box sx={{ p: 3, bgcolor: 'primary.light', borderRadius: 2, mb: 3 }}>
+                    <Typography variant="h6" sx={{ mb: 3, color: 'primary.contrastText' }}>
+                      ✏️ Création manuelle
+                    </Typography>
+                    
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Controller
+                          name="name"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              label="Nom de la plante"
+                              fullWidth
+                              error={!!errors.name}
+                              helperText={errors.name?.message}
+                              required={isManualCreation}
+                              sx={{ bgcolor: 'white', borderRadius: 1 }}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={12} sm={6}>
+                        <Controller
+                          name="type"
+                          control={control}
+                          render={({ field }) => (
+                            <Autocomplete
+                              {...field}
+                              options={Object.values(PlantType)}
+                              getOptionLabel={(option) => PlantTypeLabels[option]}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  label="Type de plante"
+                                  error={!!errors.type}
+                                  helperText={errors.type?.message}
+                                  required={isManualCreation}
+                                  sx={{ bgcolor: 'white', borderRadius: 1 }}
+                                />
+                              )}
+                              onChange={(_, value) => field.onChange(value)}
+                              value={field.value || null}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={12}>
+                        <Controller
+                          name="description"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              label="Description (optionnel)"
+                              fullWidth
+                              multiline
+                              rows={2}
+                              sx={{ bgcolor: 'white', borderRadius: 1 }}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={6}>
+                        <Controller
+                          name="baseWateringFrequencyDays"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              label="Fréquence d'arrosage (jours)"
+                              type="number"
+                              fullWidth
+                              InputProps={{ inputProps: { min: 1, max: 365 } }}
+                              sx={{ bgcolor: 'white', borderRadius: 1 }}
+                            />
+                          )}
+                        />
+                      </Grid>
+                      
+                      <Grid item xs={6}>
+                        <Controller
+                          name="baseWaterAmountMl"
+                          control={control}
+                          render={({ field }) => (
+                            <TextField
+                              {...field}
+                              label="Quantité d'eau (ml)"
+                              type="number"
+                              fullWidth
+                              InputProps={{ inputProps: { min: 10, max: 5000 } }}
+                              sx={{ bgcolor: 'white', borderRadius: 1 }}
+                            />
+                          )}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Box>
+                )}
+
+                {/* Section de recherche API (mode non-manuel) */}
+                {!isManualCreation && searchMethod === 'name' && (
                   </Tabs>
                 </Paper>
 
