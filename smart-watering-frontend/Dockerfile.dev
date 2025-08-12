@@ -1,5 +1,5 @@
 # Frontend Dockerfile pour développement avec mocks
-FROM node:18-alpine AS development
+FROM node:24-alpine AS development
 
 WORKDIR /app
 
