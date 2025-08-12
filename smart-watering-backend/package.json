@@ -21,7 +21,7 @@
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
     "module-alias": "^2.2.3",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.2.1",
     "pg": "^8.11.3",
     "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
