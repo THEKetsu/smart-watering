@@ -1,5 +1,5 @@
 # Dockerfile simplifié pour éviter les problèmes de credentials
-FROM node:18-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
