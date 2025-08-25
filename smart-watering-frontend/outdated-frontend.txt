@@ -1,0 +1,22 @@
+Package              Current     Wanted   Latest  Location  Depended by
+@emotion/react       MISSING    11.14.0  11.14.0  -         smart-watering-frontend
+@emotion/styled      MISSING    11.14.1  11.14.1  -         smart-watering-frontend
+@hookform/resolvers  MISSING     3.10.0    5.2.1  -         smart-watering-frontend
+@mui/icons-material  MISSING     5.18.0    7.3.1  -         smart-watering-frontend
+@mui/material        MISSING     5.18.0    7.3.1  -         smart-watering-frontend
+@mui/x-date-pickers  MISSING     6.20.2   8.10.2  -         smart-watering-frontend
+@types/node          MISSING  18.19.123   24.3.0  -         smart-watering-frontend
+@types/react         MISSING    18.3.24  19.1.11  -         smart-watering-frontend
+@types/react-dom     MISSING     18.3.7   19.1.7  -         smart-watering-frontend
+axios                MISSING     1.11.0   1.11.0  -         smart-watering-frontend
+date-fns             MISSING     2.30.0    4.1.0  -         smart-watering-frontend
+react                MISSING     18.3.1   19.1.1  -         smart-watering-frontend
+react-dom            MISSING     18.3.1   19.1.1  -         smart-watering-frontend
+react-hook-form      MISSING     7.62.0   7.62.0  -         smart-watering-frontend
+react-query          MISSING     3.39.3   3.39.3  -         smart-watering-frontend
+react-router-dom     MISSING     6.30.1   6.30.1  -         smart-watering-frontend
+react-scripts        MISSING      5.0.1    5.0.1  -         smart-watering-frontend
+react-toastify       MISSING      9.1.3   11.0.5  -         smart-watering-frontend
+recharts             MISSING     2.15.4    3.1.2  -         smart-watering-frontend
+typescript           MISSING      4.9.5    5.9.2  -         smart-watering-frontend
+yup                  MISSING      1.7.0    1.7.0  -         smart-watering-frontend

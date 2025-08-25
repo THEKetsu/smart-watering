@@ -1,0 +1,15 @@
+Package         Current   Wanted   Latest  Location  Depended by
+axios           MISSING   1.11.0   1.11.0  -         smart-watering-backend
+bcrypt          MISSING    5.1.1    6.0.0  -         smart-watering-backend
+cors            MISSING    2.8.5    2.8.5  -         smart-watering-backend
+dotenv          MISSING   16.6.1   17.2.1  -         smart-watering-backend
+express         MISSING   4.21.2    5.1.0  -         smart-watering-backend
+helmet          MISSING    7.2.0    8.1.0  -         smart-watering-backend
+joi             MISSING  17.13.3  17.13.3  -         smart-watering-backend
+jsonwebtoken    MISSING    9.0.2    9.0.2  -         smart-watering-backend
+module-alias    MISSING    2.2.3    2.2.3  -         smart-watering-backend
+node-cron       MISSING    3.0.3    4.2.1  -         smart-watering-backend
+pg              MISSING   8.16.3   8.16.3  -         smart-watering-backend
+tsc-alias       MISSING   1.8.16   1.8.16  -         smart-watering-backend
+tsconfig-paths  MISSING    4.2.0    4.2.0  -         smart-watering-backend
+typeorm         MISSING   0.3.26   0.3.26  -         smart-watering-backend
